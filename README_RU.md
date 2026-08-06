@@ -231,3 +231,5 @@ Win32 невозможно — старый read-back по этим агента
 ```
 python -m pytest -q
 ```
+
+<!-- source-digest: README.md sha256:ceeaf6195f36595f -->
