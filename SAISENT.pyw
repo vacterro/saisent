@@ -139,6 +139,7 @@ class Config:
         # / {date} / {time} placeholders, expanded when inserted.
         "templates": [],
         "geometry": "880x600",
+        "theme": "vintage",
     }
 
     def __init__(self, path: Path) -> None:
@@ -370,6 +371,9 @@ class SaisentApp(tk.Tk):
             # the user can fix the file and restart.
             self.log(f"SAISENT.json: {exc} — работаю с настройками по умолчанию.")
             self.config_store = Config(CONFIG_PATH)
+        theme_name = str(self.config_store["theme"])
+        if theme_name in core.THEMES:
+            C.update(core.THEMES[theme_name])
         self.queues = QueueStore(QUEUE_PATH)
         self.queues.load()
 
@@ -416,6 +420,7 @@ class SaisentApp(tk.Tk):
         self.limits_var = tk.BooleanVar(value=bool(self.config_store["check_limits"]))
         self.dry_var = tk.BooleanVar(value=bool(self.config_store["dry"]))
         self.tray_var = tk.BooleanVar(value=bool(self.config_store["tray_enabled"]))
+        self.theme_var = tk.StringVar(value=str(self.config_store["theme"]))
         self.after_var = tk.StringVar(
             value=afterrun.label_for(str(self.config_store["after_run"]))
         )
@@ -1697,12 +1702,41 @@ class SaisentApp(tk.Tk):
                 muted=True,
             ).pack(side="left")
 
+        theme_group = group(window, " Тема ")
+        theme_group.pack(fill="x", padx=8, pady=(6, 0))
+        theme_row = core.vframe(theme_group)
+        theme_row.pack(fill="x")
+        for name, label in (("vintage", "Vintage Golden"), ("dark", "Тёмная"), ("light", "Светлая")):
+            tk.Radiobutton(
+                theme_row,
+                text=label,
+                variable=self.theme_var,
+                value=name,
+                command=lambda n=name: self.apply_theme(n),
+                bg=C["surface"],
+                fg=C["textPrimary"],
+                selectcolor=C["surfaceAlt"],
+                activebackground=C["surfaceRaised"],
+                activeforeground=C["textPrimary"],
+                font=FONT_SMALL,
+                bd=0,
+                highlightthickness=0,
+            ).pack(side="left", padx=(0, 8))
+
         row = core.vframe(window)
         row.pack(fill="x", padx=8, pady=8)
         core.vbutton(row, "Включить порты навсегда", self.enable_ports, width=24).pack(
             side="left"
         )
         core.vbutton(row, "Закрыть", window.destroy, width=10).pack(side="right")
+
+    def apply_theme(self, name: str) -> None:
+        self.config_store["theme"] = name
+        self.config_store.save()
+        self.theme_var.set(name)
+        if name in core.THEMES:
+            C.update(core.THEMES[name])
+        self.set_status("IDLE", f"Тема '{name}' применена. Перезапустите окно для полного эффекта.")
 
     def remember_flags(self) -> None:
         self.config_store["tray_enabled"] = bool(self.tray_var.get())

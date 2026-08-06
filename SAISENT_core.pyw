@@ -70,6 +70,50 @@ C = {
     "compareBack": "#0F0A04",
 }
 
+DARK = {
+    "background": "#0D0D0D",
+    "backgroundSoft": "#141414",
+    "surface": "#1E1E1E",
+    "surfaceRaised": "#2A2A2A",
+    "surfaceAlt": "#2E2E2E",
+    "borderDark": "#080808",
+    "borderHighlight": "#808080",
+    "borderMuted": "#3A3A3A",
+    "textPrimary": "#CCCCCC",
+    "textSecondary": "#999999",
+    "textMuted": "#666666",
+    "accentTeal": "#007ACC",
+    "accentTealDeep": "#004C7A",
+    "success": "#3A7A20",
+    "warning": "#8A8A20",
+    "danger": "#8A2020",
+    "selection": "#264F78",
+    "compareBack": "#0A0A0A",
+}
+
+LIGHT = {
+    "background": "#F0F0F0",
+    "backgroundSoft": "#E8E8E8",
+    "surface": "#FFFFFF",
+    "surfaceRaised": "#F5F5F5",
+    "surfaceAlt": "#EAEAEA",
+    "borderDark": "#A0A0A0",
+    "borderHighlight": "#C0C0C0",
+    "borderMuted": "#CCCCCC",
+    "textPrimary": "#1A1A1A",
+    "textSecondary": "#555555",
+    "textMuted": "#888888",
+    "accentTeal": "#0066CC",
+    "accentTealDeep": "#003D7A",
+    "success": "#3A7A20",
+    "warning": "#8A8A20",
+    "danger": "#CC2222",
+    "selection": "#CDE0F5",
+    "compareBack": "#E0E0E0",
+}
+
+THEMES = {"vintage": C, "dark": DARK, "light": LIGHT}
+
 FONT = ("Verdana", 10)
 FONT_SMALL = ("Verdana", 9)
 FONT_TITLE = ("Verdana", 12, "bold")
