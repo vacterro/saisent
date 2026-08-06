@@ -388,6 +388,8 @@ class SaisentApp(tk.Tk):
         self._limit_rescan_pending = False
         self._cdp_ports: dict = {}
         self._editing_id: str | None = None
+        self._undo_item: tuple[str, str] | None = None
+        self._undo_after: str | None = None
 
         self.registry = self._build_registry()
         self.deliverer = Deliverer(
@@ -694,6 +696,11 @@ class SaisentApp(tk.Tk):
             batch_row, "СТОП", self.stop_send, role="danger", width=6, state="disabled"
         )
         self.stop_button.pack(side="right")
+        self.undo_button = core.vbutton(
+            batch_row, "Отменить", self.undo_last_send, width=10
+        )
+        self.undo_button.pack(side="right", padx=(0, 4))
+        self.undo_button.pack_forget()
 
         sched = core.vframe(self.queue_box)
         sched.pack(fill="x", pady=(2, 0))
@@ -1110,6 +1117,53 @@ class SaisentApp(tk.Tk):
         else:
             self.set_status("IDLE", "Импорт: нет новых элементов (все уже есть или файл пуст).")
 
+    def undo_last_send(self) -> None:
+        if self._undo_item is None:
+            return
+        key, item_id = self._undo_item
+        item = self.queues.find(key, item_id)
+        if item is None or item.state != STATE_SENT:
+            self.set_status("IDLE", "Отмена невозможна: промпт уже не в статусе 'отправлен'.")
+            self._undo_item = None
+            self.undo_button.pack_forget()
+            return
+        if item.confirmed:
+            self.set_status("IDLE", "Отмена невозможна: сессия уже обработала промпт.")
+            self._undo_item = None
+            self.undo_button.pack_forget()
+            return
+        item.state = STATE_PENDING
+        item.reason = ""
+        item.sent_at = ""
+        item.confirmed = False
+        self.queues.save()
+        self._undo_item = None
+        self._cancel_undo_timer()
+        if hasattr(self, "undo_button"):
+            try:
+                self.undo_button.pack_forget()
+            except tk.TclError:
+                pass
+        self._queue_cache = ()
+        self.render_queue()
+        self.render_sessions(time.time())
+        self.set_status("IDLE", "Отменено: промпт возвращён в очередь.")
+
+    def _cancel_undo_timer(self) -> None:
+        if self._undo_after is not None:
+            if hasattr(self, "after_cancel"):
+                self.after_cancel(self._undo_after)
+            self._undo_after = None
+
+    def _hide_undo_button(self) -> None:
+        self._undo_item = None
+        self._undo_after = None
+        if hasattr(self, "undo_button"):
+            try:
+                self.undo_button.pack_forget()
+            except tk.TclError:
+                pass
+
     def after_cleanup(self) -> None:
         self.queues.save()
         self.cancel_edit()
@@ -1323,6 +1377,17 @@ class SaisentApp(tk.Tk):
                 f"Отправляю {len(jobs)} промпт(ов) в: {names}.{extra}Когда: {when}."
             )
         self.set_busy(True)
+        item = jobs[0][1]
+        if hasattr(item, "id") and hasattr(self, "undo_button"):
+            self._undo_item = (jobs[0][0].key, item.id)
+            try:
+                self.undo_button.pack(
+                    side="right", padx=(0, 4), before=self.stop_button
+                )
+            except tk.TclError:
+                pass
+        if hasattr(self, "_cancel_undo_timer"):
+            self._cancel_undo_timer()
         self.worker.start(
             jobs,
             int(self.config_store["gap_ms"]),
@@ -1734,6 +1799,22 @@ class SaisentApp(tk.Tk):
                 elif kind == "done":
                     sent, reason = args
                     self.set_busy(False)
+                    if (
+                        sent > 0
+                        and self._undo_item is not None
+                        and hasattr(self, "undo_button")
+                    ):
+                        try:
+                            self.undo_button.pack(
+                                side="right", padx=(0, 4),
+                                before=self.stop_button,
+                            )
+                        except tk.TclError:
+                            pass
+                        if hasattr(self, "after"):
+                            self._undo_after = self.after(
+                                30000, self._hide_undo_button
+                            )
                     self.set_status(
                         "DONE" if "остановлено" not in reason else "STOPPED",
                         f"Отправлено {sent}: {reason}",
