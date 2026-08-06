@@ -1,0 +1,27 @@
+{
+  "version": 1,
+  "agents": [
+    "claude-code"
+  ],
+  "tabs": {},
+  "gap_ms": 1500,
+  "submit": "ENTER",
+  "auto_refresh": true,
+  "refresh_seconds": 5,
+  "freebuff_roots": [],
+  "dry": false,
+  "activation_timeout_ms": 10000,
+  "key_delay_ms": 45,
+  "settle_ms": 400,
+  "confirm_seconds": 10,
+  "busy_seconds": 20,
+  "schedule_time": "5:52",
+  "check_limits": true,
+  "after_run": "monitor_off",
+  "tray_enabled": true,
+  "cdp_titles": {},
+  "cdp_profiles": {},
+  "quota_plans": {},
+  "templates": [],
+  "geometry": "1184x776+556+197"
+}

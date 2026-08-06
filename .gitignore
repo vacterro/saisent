@@ -1,0 +1,21 @@
+# One-off scripts and dead fragments — kept for reference, never edited.
+_archive/
+
+# Runtime logs
+*.log
+
+# Python caches
+__pycache__/
+*.pyc
+
+# Test / scratch state
+s.json
+s.queue.jsonl
+
+# Local editor noise
+*.swp
+.DS_Store
+
+# Agent memory dirs
+.saipen/
+.freebuff/

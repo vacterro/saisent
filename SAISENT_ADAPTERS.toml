@@ -1,0 +1,136 @@
+# SAISENT — агентные адаптеры
+#
+# Один [[agent]]-блок на агента. Выбор агента в GUI применяет его пробу
+# бездействия, settle-окно и транспорт. Битый блок отключается сам, не
+# ломая остальных.
+#
+# Виды проб:
+#   file    newest файл по `glob`; idle пока size+mtime стоят
+#   sqlite  max(rowid) таблицы или mtime -wal; idle пока стабильно
+#   window  текст UI Automation по паттернам      (нужен uiautomation)
+#   process CPU ниже `cpu_below`                  (нужен psutil)
+
+# ------------------------------------------------------------- Claude Code
+# Проверено 21.07: файл сессии дописывается вживую во время хода.
+# Последняя строка с контентом должна быть готовым ответом ассистента.
+[[agent]]
+name        = "Claude Code"
+enabled     = true
+settle_ms   = 2500
+submit      = "enter"
+multiline   = "join"
+skill_format = "/{skill} {text}"
+blocker_pattern = "(?i)(do you want to proceed|allow this|\\[y/n\\])"
+
+  [[agent.probe]]
+  kind     = "file"
+  glob     = "~/.claude/projects/*/*.jsonl"
+  newest   = true
+  quiet_ms = 2000
+  last_line_json = { type = "assistant" }
+  ignore_types   = ["custom-title", "ai-title", "mode", "last-prompt",
+                    "queue-operation", "summary"]
+
+# ----------------------------------------------------------------- freebuff
+# WAL-mode SQLite база в .freebuff/ проекта. Файл -wal двигается на каждой
+# записи. Транспорт cdp требует запуска freebuff с
+# --remote-debugging-port (порт 9334), иначе watcher только наблюдает.
+[[agent]]
+name       = "freebuff"
+enabled    = true
+settle_ms  = 3000
+submit     = "enter"
+multiline  = "join"
+skill_format = "/{skill} {text}"
+transport  = "cdp"
+cdp_port   = 9334
+# Адресовать КОНКРЕТНЫЙ разговор, а не тот, что открыт: селектор строк
+# разговоров в сайдбаре. Sender кликает строку, чей текст совпал с dialog
+# элемента очереди, и отказывается (не угадывает), если строки нет.
+# Селектор проверяется вживую под каждое приложение - как и cdp_selector.
+# cdp_dialog_selector = "[role=listitem]"
+# cdp_dialog_attr = "aria-label"   # метка из атрибута, если строка-кнопка
+
+  [[agent.probe]]
+  kind     = "sqlite"
+  path     = ".freebuff/desktop-v2.db"
+  watch    = "wal_mtime"
+  quiet_ms = 2500
+
+# ---------------------------------------------------------------- opencode
+# Один 905MB WAL-store на все сессии. Порт cdp 9333 (запуск с
+# --remote-debugging-port). Селектор textarea — композер.
+[[agent]]
+name      = "opencode"
+enabled   = true
+settle_ms = 4000
+submit    = "enter"
+multiline = "join"
+skill_format = "/{skill} {text}"
+transport  = "cdp"
+cdp_port   = 9333
+cdp_selector = "textarea"
+
+  [[agent.probe]]
+  kind     = "sqlite"
+  path     = "~/.local/share/opencode/opencode.db"
+  watch    = "wal_mtime"
+  quiet_ms = 4000
+
+# -------------------------------------------------------------- antigravity
+# Одна SQLite-база НА РАЗГОВОР под ~/.gemini. Glob *.db* — ловит .db, .db-wal
+# и .db-shm вместе (размер не монотонный: чекпойнт роняет его). Порт cdp —
+# из DevToolsActivePort, назначается при каждом запуске.
+[[agent]]
+name      = "antigravity"
+enabled   = true
+settle_ms = 4000
+submit    = "enter"
+multiline = "join"
+skill_format = "/{skill} {text}"
+transport  = "cdp"
+cdp_title  = "chat"
+cdp_port_file = "~/AppData/Roaming/Antigravity/DevToolsActivePort"
+
+  [[agent.probe]]
+  kind     = "file"
+  glob     = "~/.gemini/antigravity/conversations/*.db*"
+  newest   = true
+  quiet_ms = 4000
+
+# ------------------------------------------------------------------- codex
+# Не установлен — запись-пример. Проба ничего не найдёт, адаптер честно
+# скажет «не готов». Вернётся — добавить transport = "cdp", если запускается
+# с --remote-debugging-port.
+[[agent]]
+name      = "codex"
+enabled   = true
+settle_ms = 4000
+submit    = "enter"
+multiline = "join"
+skill_format = "/{skill} {text}"
+
+  [[agent.probe]]
+  kind     = "file"
+  glob     = "~/.codex/sessions/*/*/*/rollout-*.jsonl"
+  newest   = true
+  quiet_ms = 4000
+
+# --------------------------------------------------------------- gemini-cli
+# Установлен, но сканер не нашёл стора, двигающегося во время работы.
+# Оставлен без пробы — честный ответ «не готов» вместо ложного «idle».
+[[agent]]
+name      = "gemini-cli"
+enabled   = false
+settle_ms = 4000
+submit    = "enter"
+multiline = "join"
+
+# ------------------------------------------------------------------ limits
+[limits]
+min_gap_ms       = 4000
+max_sends        = 25
+dry_run_new      = true
+confirm_first     = false
+allow_focus_steal = false
+restore_clipboard_ms = 400

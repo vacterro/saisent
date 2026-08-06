@@ -1,0 +1,221 @@
+{
+  "version": 1,
+  "labels": {
+    "claude-code:46e9cc6c-dcc9-47a3-b90c-e49df34e39e0": "saipen-dd",
+    "claude-code:630dfdda-5fca-4d49-960c-9daaf5dd5fbb": "saisent-1a",
+    "antigravity:932a8d4e-bcc9-4aac-be30-9074c2d3658c": "_SAISENT",
+    "antigravity:786ad813-7bc4-457a-9357-526a593ebab9": "_SAIPEN",
+    "antigravity:6ab97650-91c2-473c-bd0b-4eafb1b66574": "_WIN95THEME",
+    "antigravity:570dd8c9-ee7e-4d65-8410-990bb889aad7": "_SAIPENVIEW",
+    "antigravity:4c14cd4a-050b-49d9-a457-84a01c0efdfb": "WildRiftAssistant",
+    "antigravity:0a3b6321-bdc1-48f2-a087-ec7c8ff592dd": "_SAIPEN",
+    "claude-code:13c10fd4-369c-4cd2-9618-78936f6e7973": "fastprompter-47",
+    "antigravity:63f0280c-0d2c-4d04-b406-06b2a6cde106": "_FastPrompter",
+    "antigravity:00ee8c59-9d5a-4376-bcd3-f726f71e7007": "SubtitleEditContextMenu",
+    "codenomad:ses_02d6f4e94ffeHXFBvQlXcTEXSZ": "Quick check-in",
+    "claude-code:52a40e4c-cd35-4b24-a87e-226b24644a2f": "fastprompter-9e",
+    "claude-code:a1c093b9-579e-417c-8bed-c128d9df471c": "saipenview-50",
+    "claude-code:0630afa0-ea5f-4736-9904-30fe7f000c85": "wintage-c0",
+    "codenomad:ses_02bd228f8ffejSTcSvDOJq4Y0j": "New session - 2026-08-05T23:06:41.799Z",
+    "claude-code:f2e8a345-3c7a-4f31-ab24-d4bb99c1dfa5": "saipen-a2"
+  },
+  "schedules": {
+    "claude-code:f2e8a345-3c7a-4f31-ab24-d4bb99c1dfa5": "10:52"
+  },
+  "queues": {
+    "claude-code:46e9cc6c-dcc9-47a3-b90c-e49df34e39e0": [
+      {
+        "id": "954c03e07fb7",
+        "text": "сс /goal",
+        "state": "pending",
+        "created": "2026-08-06T02:03:55",
+        "sent_at": "",
+        "reason": "",
+        "confirmed": false
+      }
+    ],
+    "claude-code:52a40e4c-cd35-4b24-a87e-226b24644a2f": [
+      {
+        "id": "9286e8083b78",
+        "text": "сс /goal",
+        "state": "failed",
+        "created": "2026-08-06T02:03:55",
+        "sent_at": "",
+        "reason": "сессия закрылась, пока промпт ждал",
+        "confirmed": false
+      },
+      {
+        "id": "91049ef04ed5",
+        "text": "cc",
+        "state": "failed",
+        "created": "2026-08-06T15:41:13",
+        "sent_at": "",
+        "reason": "сессия закрылась, пока промпт ждал",
+        "confirmed": false
+      }
+    ],
+    "claude-code:630dfdda-5fca-4d49-960c-9daaf5dd5fbb": [
+      {
+        "id": "167e304499f3",
+        "text": "сс /goal",
+        "state": "failed",
+        "created": "2026-08-06T02:03:55",
+        "sent_at": "",
+        "reason": "сессия закрылась, пока промпт ждал",
+        "confirmed": false
+      },
+      {
+        "id": "56ea0b52c4e0",
+        "text": "cc",
+        "state": "failed",
+        "created": "2026-08-06T15:41:13",
+        "sent_at": "",
+        "reason": "сессия закрылась, пока промпт ждал",
+        "confirmed": false
+      }
+    ],
+    "codenomad:ses_02bd228f8ffejSTcSvDOJq4Y0j": [
+      {
+        "id": "cd6cf74d56bf",
+        "text": "qq",
+        "state": "pending",
+        "created": "2026-08-06T02:06:54",
+        "sent_at": "",
+        "reason": "",
+        "confirmed": false
+      },
+      {
+        "id": "607eadbaddd9",
+        "text": "ee",
+        "state": "pending",
+        "created": "2026-08-06T02:06:55",
+        "sent_at": "",
+        "reason": "",
+        "confirmed": false
+      },
+      {
+        "id": "2f1b7dd6d54e",
+        "text": "qqq",
+        "state": "pending",
+        "created": "2026-08-06T02:06:59",
+        "sent_at": "",
+        "reason": "",
+        "confirmed": false
+      },
+      {
+        "id": "aa135dfb9c3a",
+        "text": "eee",
+        "state": "pending",
+        "created": "2026-08-06T02:10:08",
+        "sent_at": "",
+        "reason": "",
+        "confirmed": false
+      },
+      {
+        "id": "108c3777b08f",
+        "text": "sc",
+        "state": "pending",
+        "created": "2026-08-06T02:10:17",
+        "sent_at": "",
+        "reason": "",
+        "confirmed": false
+      },
+      {
+        "id": "ca755768e8a3",
+        "text": "sc",
+        "state": "pending",
+        "created": "2026-08-06T02:10:18",
+        "sent_at": "",
+        "reason": "",
+        "confirmed": false
+      },
+      {
+        "id": "1fe18d71be09",
+        "text": "sc",
+        "state": "pending",
+        "created": "2026-08-06T02:10:19",
+        "sent_at": "",
+        "reason": "",
+        "confirmed": false
+      },
+      {
+        "id": "c2707f24c1ce",
+        "text": "sc",
+        "state": "pending",
+        "created": "2026-08-06T02:10:19",
+        "sent_at": "",
+        "reason": "",
+        "confirmed": false
+      },
+      {
+        "id": "ac9588cbee84",
+        "text": "sc",
+        "state": "pending",
+        "created": "2026-08-06T02:10:20",
+        "sent_at": "",
+        "reason": "",
+        "confirmed": false
+      },
+      {
+        "id": "94dbe6fbfac0",
+        "text": "sc",
+        "state": "pending",
+        "created": "2026-08-06T02:10:21",
+        "sent_at": "",
+        "reason": "",
+        "confirmed": false
+      }
+    ],
+    "claude-code:f2e8a345-3c7a-4f31-ab24-d4bb99c1dfa5": [
+      {
+        "id": "86d4d31dfefb",
+        "text": "cc /goal",
+        "state": "pending",
+        "created": "2026-08-06T05:28:04",
+        "sent_at": "",
+        "reason": "не подтверждено — агент не показал активности",
+        "confirmed": false
+      },
+      {
+        "id": "f26a4e7ce29c",
+        "text": "cc",
+        "state": "pending",
+        "created": "2026-08-06T15:41:13",
+        "sent_at": "",
+        "reason": "не подтверждено — агент не показал активности",
+        "confirmed": false
+      }
+    ],
+    "claude-code:0630afa0-ea5f-4736-9904-30fe7f000c85": [
+      {
+        "id": "446710b26e07",
+        "text": "cc",
+        "state": "failed",
+        "created": "2026-08-06T15:41:48",
+        "sent_at": "",
+        "reason": "сессия закрылась, пока промпт ждал",
+        "confirmed": false
+      },
+      {
+        "id": "f68a82108bf1",
+        "text": "cc",
+        "state": "failed",
+        "created": "2026-08-06T15:41:13",
+        "sent_at": "",
+        "reason": "сессия закрылась, пока промпт ждал",
+        "confirmed": false
+      }
+    ],
+    "claude-code:a1c093b9-579e-417c-8bed-c128d9df471c": [
+      {
+        "id": "4c85a738ae10",
+        "text": "cc",
+        "state": "failed",
+        "created": "2026-08-06T15:41:13",
+        "sent_at": "",
+        "reason": "сессия закрылась, пока промпт ждал",
+        "confirmed": false
+      }
+    ]
+  }
+}
