@@ -588,7 +588,11 @@ class SaisentApp(tk.Tk):
         )
         self.text_box.pack(fill="x")
         self.text_box.bind("<Control-Return>", self.on_ctrl_enter)
+        self.text_box.bind("<Control-Shift-Return>", lambda e: (self.send_all(), "break")[1])
         self.text_box.bind("<Escape>", lambda e: self.cancel_edit() or "break")
+        self.bind_all("<Control-l>", lambda e: self.text_box.focus_set() or "break")
+        for n in range(1, 10):
+            self.bind_all(f"<Control-Key-{n}>", self._make_jump(n))
 
         self.normal_actions = core.vframe(text_box)
         self.normal_actions.pack(fill="x", pady=(5, 0))
@@ -943,6 +947,17 @@ class SaisentApp(tk.Tk):
         else:
             self.send_text_now()
         return "break"
+
+    def _make_jump(self, n: int):
+        def jump(_event=None):
+            children = self.session_tree.get_children("")
+            if 0 < n <= len(children):
+                item = children[n - 1]
+                self.session_tree.selection_set(item)
+                self.session_tree.see(item)
+                self.on_session_selected()
+            return "break"
+        return jump
 
     def busy_now(self) -> bool:
         if self.worker.running and getattr(self.worker, "phase", "") != "waiting":
