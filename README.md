@@ -69,6 +69,22 @@ Reset time is taken from the agent's own words. If the agent does not
 state one, SAISENT writes "reset time not stated" rather than inventing
 a placeholder like "+5 hours".
 
+### When limits reset
+
+If the agent never names a reset time, SAISENT falls back to a rule per
+agent:
+
+| Agent | Rule | Meaning |
+|---|---|---|
+| Freebuff | `daily 10:00` | resets every day at 10:00 |
+| CodeNomad | `daily 03:00` | resets every day at 03:00 |
+| Claude Code | `rolling 5h` | 5 hours after the last sent prompt |
+| Antigravity | agent's words only | no rule — whatever it states, or nothing |
+
+A rule never overrides a time the agent stated; the agent is the
+authority on its own quota. Override any rule in `SAISENT.json` under
+`quota_plans`, e.g. `{ "quota_plans": { "claude-code": "rolling 3h" } }`.
+
 ## Why The Next Ones Don't Send
 
 Sending is strictly sequential and stops on the first real error. The

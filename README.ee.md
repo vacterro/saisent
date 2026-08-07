@@ -53,6 +53,21 @@ töödelnud.
 - Paremal olekuribal: `limiidid: kõik vabad` või punaselt
   `claude-code: LIMIIT kuni 09:22 (1t 05min jäänud)`.
 
+### Millal limiidid lähtestuvad
+
+Kui agent ise aega ei nimeta, kasutab SAISENT reeglit:
+
+| Agent | Reegel | Tähendus |
+|---|---|---|
+| Freebuff | `daily 10:00` | lähtestub iga päev kell 10:00 |
+| CodeNomad | `daily 03:00` | lähtestub iga päev kell 03:00 |
+| Claude Code | `rolling 5h` | 5 tundi pärast viimast saadetud teksti |
+| Antigravity | ainult agendi sõnad | reeglit pole — mida ütleb, seda on |
+
+Reegel ei tühista kunagi agendi enda nimetatud aega; agent on oma limiidi
+volitaja. Reegli saab üle kirjutada `SAISENT.json` võtmes `quota_plans`,
+nt `{ "quota_plans": { "claude-code": "rolling 3h" } }`.
+
 ## Miks järgmised ei lähe
 
 Saatmine on rangelt järjestikune ja peatub esimesel päris veal. Põhjus
@@ -94,4 +109,4 @@ vahele.
 python -m pytest -q
 ```
 
-<!-- source-digest: README.md sha256:a73584ea9e942d83d3a1d5a38f8437aa55a5abf8837b778d616815f160dc0a56 -->
+<!-- source-digest: README.md sha256:8396e932d633848051a0136a6389cad9784a44e2a74b88b1cdb693c9505b6d2b -->
