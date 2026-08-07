@@ -14,6 +14,7 @@ from SAISENT_sessions.discover import (
     STATE_IDLE,
     AntigravityProvider,
     ClaudeCodeProvider,
+    CodeNomadProvider,
     FreebuffProvider,
     SessionRegistry,
     project_slug,
@@ -372,3 +373,90 @@ def test_default_registry_carries_every_shipped_provider(agent):
     from SAISENT_sessions.discover import default_registry
 
     assert agent in default_registry().provider_names()
+
+
+# ------------------------------------------- silent-failure logging (T-081)
+def test_claude_code_logs_unreadable_session_file(tmp_path):
+    """A corrupt session file is a finding, not something to shrug at."""
+    sessions = tmp_path / "sessions"
+    sessions.mkdir()
+    (sessions / "1.json").write_text("{not json", encoding="utf-8")
+    lines: list[str] = []
+
+    provider = ClaudeCodeProvider(
+        sessions_dir=sessions,
+        projects_dir=tmp_path / "projects",
+        alive=lambda pid: True,
+        log=lines.append,
+    )
+    assert provider.discover(now=1.0) == []
+    assert any("unreadable session file" in line for line in lines)
+
+
+def test_claude_code_logs_malformed_pid(tmp_path):
+    """A session whose pid is not a number can never be a live session."""
+    sessions = tmp_path / "sessions"
+    write_session(sessions, "not-a-pid", "aaa", r"V:\proj\one", "one-1", 1)
+    lines: list[str] = []
+
+    provider = ClaudeCodeProvider(
+        sessions_dir=sessions,
+        projects_dir=tmp_path / "projects",
+        alive=lambda pid: True,
+        log=lines.append,
+    )
+    assert provider.discover(now=1.0) == []
+    assert any("malformed pid" in line for line in lines)
+
+
+def test_freebuff_logs_corrupt_database(tmp_path):
+    """An unreadable Freebuff store must say so, not silently list nothing."""
+    root = tmp_path / "proj"
+    db = root / ".freebuff" / "desktop-v2.db"
+    db.parent.mkdir(parents=True)
+    db.write_bytes(b"this is not a sqlite database at all")
+    lines: list[str] = []
+
+    provider = FreebuffProvider(
+        roots=[root], max_depth=1, running=lambda _e: True, log=lines.append
+    )
+    assert provider.discover(now=1.0) == []
+    assert any("discover: freebuff" in line for line in lines)
+
+
+def test_codenomad_logs_corrupt_database(tmp_path):
+    """CodeNomad's store failing must not read as 'no sessions today'."""
+    db = tmp_path / "opencode.db"
+    db.write_bytes(b"garbage")
+    lines: list[str] = []
+
+    provider = CodeNomadProvider(
+        db_path=db, running=lambda _e: True, log=lines.append
+    )
+    assert provider.discover(now=1.0) == []
+    assert any("discover: codenomad" in line for line in lines)
+
+
+def test_registry_logs_a_provider_failure():
+    """The registry speaks too: a broken provider is a log line, not a blank."""
+    stub = _Stub("freebuff", [_session("freebuff", "two")])
+    lines: list[str] = []
+    registry = SessionRegistry(
+        providers=[stub], enabled={"freebuff"}, log=lines.append
+    )
+    registry.discover(now=1.0)
+
+    stub.boom = True
+    assert [s.name for s in registry.discover(now=2.0)] == ["two"]
+    assert any("provider failed" in line for line in lines)
+
+
+def test_no_log_sink_keeps_discovery_silent(tmp_path):
+    """A caller that passes nothing keeps the old no-op behaviour."""
+    root = tmp_path / "proj"
+    db = root / ".freebuff" / "desktop-v2.db"
+    db.parent.mkdir(parents=True)
+    db.write_bytes(b"not sqlite")
+
+    provider = FreebuffProvider(roots=[root], max_depth=1, running=lambda _e: True)
+    assert provider.discover(now=1.0) == []

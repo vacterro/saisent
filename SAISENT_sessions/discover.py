@@ -19,6 +19,7 @@ import json
 import os
 import re
 import sqlite3
+import threading
 import time
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -31,6 +32,11 @@ DEFAULT_BUSY_SECONDS = 20.0
 # Antigravity keeps every conversation it ever had. Only recent ones are
 # plausibly open in the running editor.
 DEFAULT_ANTIGRAVITY_MAX_AGE_HOURS = 12.0
+
+# Discovery is pure by default: callers that want to hear about read failures
+# pass a `log` sink (SAISENT.pyw writes SAISENT.log). No sink means the old
+# silent behaviour, so tests and headless callers are unchanged.
+_NOLOG: Callable[[str], None] = lambda _message: None
 
 STATE_BUSY = "busy"
 STATE_IDLE = "idle"
@@ -174,12 +180,14 @@ class ClaudeCodeProvider:
         projects_dir: str | os.PathLike | None = None,
         alive: Callable[[int], bool] = pid_alive,
         busy_seconds: float = DEFAULT_BUSY_SECONDS,
+        log: Callable[[str], None] = _NOLOG,
     ) -> None:
         home = Path.home()
         self.sessions_dir = Path(sessions_dir or home / ".claude" / "sessions")
         self.projects_dir = Path(projects_dir or home / ".claude" / "projects")
         self.alive = alive
         self.busy_seconds = float(busy_seconds)
+        self.log = log
 
     def transcript_mtime(self, cwd: str, session_id: str) -> float:
         """When this session last wrote a turn, or 0.0 when unknown."""
@@ -188,18 +196,21 @@ class ClaudeCodeProvider:
         direct = self.projects_dir / project_slug(cwd) / f"{session_id}.jsonl"
         try:
             return direct.stat().st_mtime
-        except OSError:
-            pass
+        except OSError as exc:
+            if not isinstance(exc, FileNotFoundError):
+                self.log(f"discover: claude-code: transcript stat {direct}: {exc}")
         # The slug rule can change under us; a targeted glob still finds the
         # transcript, and only runs when the direct path missed.
         try:
             for found in self.projects_dir.glob(f"*/{session_id}.jsonl"):
                 try:
                     return found.stat().st_mtime
-                except OSError:
+                except OSError as exc:
+                    if not isinstance(exc, FileNotFoundError):
+                        self.log(f"discover: claude-code: transcript stat {found}: {exc}")
                     continue
-        except OSError:
-            pass
+        except OSError as exc:
+            self.log(f"discover: claude-code: transcript glob {self.projects_dir}: {exc}")
         return 0.0
 
     def discover(self, now: float | None = None) -> list[Session]:
@@ -207,19 +218,22 @@ class ClaudeCodeProvider:
         sessions: list[Session] = []
         try:
             files = sorted(self.sessions_dir.glob("*.json"))
-        except OSError:
+        except OSError as exc:
+            self.log(f"discover: claude-code: sessions dir unreadable {self.sessions_dir}: {exc}")
             return sessions
         for path in files:
             try:
                 raw = json.loads(path.read_text(encoding="utf-8"))
-            except (OSError, ValueError):
+            except (OSError, ValueError) as exc:
+                self.log(f"discover: claude-code: unreadable session file {path}: {exc}")
                 continue
             if not isinstance(raw, dict):
                 continue
             pid = raw.get("pid")
             try:
                 pid = int(pid)
-            except (TypeError, ValueError):
+            except (TypeError, ValueError) as exc:
+                self.log(f"discover: claude-code: malformed pid in {path}: {exc!r}")
                 continue
             if not self.alive(pid):
                 continue
@@ -270,8 +284,8 @@ class ClaudeCodeProvider:
                     content = data["message"].get("content", [])
                     if content and isinstance(content, list) and "text" in content[0]:
                         return content[0]["text"]
-            except Exception:
-                pass
+            except Exception as exc:
+                self.log(f"discover: claude-code: last-reply line unparseable: {exc}")
         return ""
 
     def tail_transcript(self, session: Session, limit: int = 4000) -> str:
@@ -284,8 +298,8 @@ class ClaudeCodeProvider:
             # transcript, and only runs when the direct path missed.
             if not direct.exists():
                 paths.extend(self.projects_dir.glob(f"*/{session.session_id}.jsonl"))
-        except OSError:
-            pass
+        except OSError as exc:
+            self.log(f"discover: claude-code: transcript glob {self.projects_dir}: {exc}")
         for p in paths:
             try:
                 with open(p, "rb") as f:
@@ -294,7 +308,9 @@ class ClaudeCodeProvider:
                     f.seek(max(0, size - limit * 2))
                     text = f.read().decode("utf-8", "ignore")
                     return text[-limit:] if len(text) > limit else text
-            except OSError:
+            except OSError as exc:
+                if not isinstance(exc, FileNotFoundError):
+                    self.log(f"discover: claude-code: transcript read {p}: {exc}")
                 continue
         return ""
 
@@ -312,10 +328,12 @@ class ClaudeCodeProvider:
                         f.seek(max(0, size - limit_per_file * 2))
                         text = f.read().decode("utf-8", "ignore")
                         results.append((p.stat().st_mtime, text[-limit_per_file:] if len(text) > limit_per_file else text))
-                except OSError:
+                except OSError as exc:
+                    if not isinstance(exc, FileNotFoundError):
+                        self.log(f"discover: claude-code: recent transcript read {p}: {exc}")
                     continue
-        except OSError:
-            pass
+        except OSError as exc:
+            self.log(f"discover: claude-code: recent transcript glob {self.projects_dir}: {exc}")
         results.sort(key=lambda x: x[0])
         return "\n".join(r[1] for r in results[-20:])
 
@@ -339,6 +357,7 @@ class FreebuffProvider:
         busy_seconds: float = DEFAULT_BUSY_SECONDS,
         max_depth: int = 3,
         running: Callable[[str], bool] | None = None,
+        log: Callable[[str], None] = _NOLOG,
     ) -> None:
         self.roots = [Path(root) for root in roots]
         self.busy_seconds = float(busy_seconds)
@@ -346,6 +365,7 @@ class FreebuffProvider:
         # `None` keeps the old behaviour for callers that only have fixtures;
         # the app passes the real check so a closed desktop lists nothing.
         self.running = running
+        self.log = log
 
     def databases(self) -> list[Path]:
         """Every `.freebuff/desktop-v2.db` under the configured roots.
@@ -365,7 +385,8 @@ class FreebuffProvider:
                 pattern = "/".join(["*"] * depth) + "/" + self.db_relative.as_posix()
                 try:
                     found.extend(path for path in root.glob(pattern) if path.is_file())
-                except OSError:
+                except OSError as exc:
+                    self.log(f"discover: freebuff: database glob {root}: {exc}")
                     continue
         unique: dict[str, Path] = {}
         for path in found:
@@ -379,14 +400,16 @@ class FreebuffProvider:
             # WAL, so a normal connection would either block or see a stale
             # snapshot. `mode=ro` keeps us out of its way.
             connection = sqlite3.connect(f"file:{db_path.as_posix()}?mode=ro", uri=True)
-        except sqlite3.Error:
+        except sqlite3.Error as exc:
+            self.log(f"discover: freebuff: open {db_path}: {exc}")
             return sessions
         try:
             rows = connection.execute(
                 "SELECT id, title, status, turn_state, project_path, updated_at,"
                 " created_at FROM threads"
             ).fetchall()
-        except sqlite3.Error:
+        except sqlite3.Error as exc:
+            self.log(f"discover: freebuff: threads query {db_path}: {exc}")
             return sessions
         finally:
             connection.close()
@@ -436,8 +459,8 @@ class FreebuffProvider:
             for role, content in rows:
                 if role == "assistant":
                     return content or ""
-        except Exception:
-            pass
+        except Exception as exc:
+            self.log(f"discover: freebuff: last reply {db_path}: {exc}")
         return ""
 
     def tail_transcript(self, session: Session, limit: int = 4000) -> str:
@@ -451,7 +474,8 @@ class FreebuffProvider:
             connection.close()
             text = "\n".join(r[1] or "" for r in reversed(rows))
             return text[-limit:] if len(text) > limit else text
-        except Exception:
+        except Exception as exc:
+            self.log(f"discover: freebuff: tail transcript {db_path}: {exc}")
             return ""
 
     def recent_transcripts(self, max_age_hours: float = 6.0, limit_per_db: int = 4000) -> str:
@@ -469,7 +493,8 @@ class FreebuffProvider:
                 text = "\n".join(r[1] or "" for r in reversed(rows))
                 if text:
                     results.append((db_path.stat().st_mtime, text[-limit_per_db:] if len(text) > limit_per_db else text))
-            except Exception:
+            except Exception as exc:
+                self.log(f"discover: freebuff: recent transcripts {db_path}: {exc}")
                 continue
         results.sort(key=lambda x: x[0])
         return "\n".join(r[1] for r in results[-20:])
@@ -499,6 +524,7 @@ class AntigravityProvider:
         busy_seconds: float = DEFAULT_BUSY_SECONDS,
         max_age_hours: float = DEFAULT_ANTIGRAVITY_MAX_AGE_HOURS,
         running: Callable[[str], bool] = process_running,
+        log: Callable[[str], None] = _NOLOG,
     ) -> None:
         home = Path.home()
         self.conversations_dir = Path(
@@ -507,6 +533,7 @@ class AntigravityProvider:
         self.busy_seconds = float(busy_seconds)
         self.max_age_hours = float(max_age_hours)
         self.running = running
+        self.log = log
         # Reading a metadata blob costs a SQLite open; the workspace never
         # changes for a conversation, so one read per file is enough.
         self._workspace_cache: dict[str, str] = {}
@@ -517,7 +544,9 @@ class AntigravityProvider:
             sidecar = db_path.with_name(db_path.name + suffix)
             try:
                 newest = max(newest, sidecar.stat().st_mtime)
-            except OSError:
+            except OSError as exc:
+                if not isinstance(exc, FileNotFoundError):
+                    self.log(f"discover: antigravity: sidecar stat {sidecar}: {exc}")
                 continue
         return newest
 
@@ -530,8 +559,9 @@ class AntigravityProvider:
             connection = sqlite3.connect(
                 f"file:{db_path.as_posix()}?mode=ro", uri=True
             )
-        except sqlite3.Error:
+        except sqlite3.Error as exc:
             self._workspace_cache[str(db_path)] = ""
+            self.log(f"discover: antigravity: open {db_path}: {exc}")
             return ""
         try:
             row = connection.execute(
@@ -542,8 +572,9 @@ class AntigravityProvider:
             if match:
                 raw = match.group(1).decode("utf-8", "ignore")
                 workspace = raw.replace("%3A", ":").replace("%3a", ":").rstrip("/")
-        except sqlite3.Error:
+        except sqlite3.Error as exc:
             workspace = ""
+            self.log(f"discover: antigravity: workspace query {db_path}: {exc}")
         finally:
             connection.close()
         self._workspace_cache[str(db_path)] = workspace
@@ -555,7 +586,8 @@ class AntigravityProvider:
         sessions: list[Session] = []
         try:
             files = sorted(self.conversations_dir.glob("*.db"))
-        except OSError:
+        except OSError as exc:
+            self.log(f"discover: antigravity: conversations dir unreadable {self.conversations_dir}: {exc}")
             return sessions
         if not self.running(self.exe_name):
             # The editor is closed. Every conversation on disk is history.
@@ -626,10 +658,11 @@ class AntigravityProvider:
                         data = json.loads(line)
                         if data.get("type") == "PLANNER_RESPONSE":
                             return data.get("content", "")
-                    except Exception:
-                        pass
-        except OSError:
-            pass
+                    except Exception as exc:
+                        self.log(f"discover: antigravity: reply line unparseable: {exc}")
+        except OSError as exc:
+            if not isinstance(exc, FileNotFoundError):
+                self.log(f"discover: antigravity: transcript read {p}: {exc}")
         return ""
 
     def tail_transcript(self, session: Session, limit: int = 4000) -> str:
@@ -652,10 +685,12 @@ class AntigravityProvider:
                         f.seek(max(0, size - limit_per_file * 2))
                         text = f.read().decode("utf-8", "ignore")
                         results.append((p.stat().st_mtime, text[-limit_per_file:] if len(text) > limit_per_file else text))
-                except OSError:
+                except OSError as exc:
+                    if not isinstance(exc, FileNotFoundError):
+                        self.log(f"discover: antigravity: recent transcript read {p}: {exc}")
                     continue
-        except OSError:
-            pass
+        except OSError as exc:
+            self.log(f"discover: antigravity: recent transcript glob {logs_dir}: {exc}")
         results.sort(key=lambda x: x[0])
         return "\n".join(r[1] for r in results[-20:])
 
@@ -680,6 +715,7 @@ class CodeNomadProvider:
         busy_seconds: float = DEFAULT_BUSY_SECONDS,
         max_age_hours: float = 24.0,
         running: Callable[[str], bool] = process_running,
+        log: Callable[[str], None] = _NOLOG,
     ) -> None:
         self.db_path = Path(
             db_path or Path.home() / ".local" / "share" / "opencode" / "opencode.db"
@@ -687,6 +723,7 @@ class CodeNomadProvider:
         self.busy_seconds = float(busy_seconds)
         self.max_age_hours = float(max_age_hours)
         self.running = running
+        self.log = log
 
     def discover(self, now: float | None = None) -> list[Session]:
         now = time.time() if now is None else now
@@ -698,7 +735,8 @@ class CodeNomadProvider:
             connection = sqlite3.connect(
                 f"file:{self.db_path.as_posix()}?mode=ro", uri=True
             )
-        except sqlite3.Error:
+        except sqlite3.Error as exc:
+            self.log(f"discover: codenomad: open {self.db_path}: {exc}")
             return sessions
         try:
             rows = connection.execute(
@@ -707,7 +745,8 @@ class CodeNomadProvider:
                 " AND time_updated >= ? ORDER BY time_updated DESC",
                 (cutoff_ms,),
             ).fetchall()
-        except sqlite3.Error:
+        except sqlite3.Error as exc:
+            self.log(f"discover: codenomad: session query {self.db_path}: {exc}")
             return sessions
         finally:
             connection.close()
@@ -737,9 +776,11 @@ class CodeNomadProvider:
                     detail=agent_name or "",
                 )
             )
-        # Addressed by name over the debugger, so a tab index would be a lie.
-        for session in sessions:
-            session.tab_hint = None
+        # Addressed by name over the debugger, but Ctrl+1..9 works for tab
+        # switching when CDP is unavailable — unlike Claude Code which ignores
+        # Ctrl+digit entirely.
+        for index, session in enumerate(sessions, start=1):
+            session.tab_hint = index if index <= 9 else None
         return sessions
 
     def tail_transcript(self, session: Session, limit: int = 4000) -> str:
@@ -756,7 +797,8 @@ class CodeNomadProvider:
             connection = sqlite3.connect(
                 f"file:{self.db_path.as_posix()}?mode=ro", uri=True
             )
-        except sqlite3.Error:
+        except sqlite3.Error as exc:
+            self.log(f"discover: codenomad: open {self.db_path}: {exc}")
             return ""
         try:
             rows = connection.execute(
@@ -764,7 +806,8 @@ class CodeNomadProvider:
                 " ORDER BY time_created DESC LIMIT 400",
                 (cutoff_ms,),
             ).fetchall()
-        except sqlite3.Error:
+        except sqlite3.Error as exc:
+            self.log(f"discover: codenomad: part query {self.db_path}: {exc}")
             return ""
         finally:
             connection.close()
@@ -784,7 +827,9 @@ class SessionRegistry:
     providers: list[object] = field(default_factory=list)
     enabled: set[str] = field(default_factory=set)
     _cache: dict[str, list[Session]] = field(default_factory=dict, repr=False)
+    _lock: threading.Lock = field(default_factory=threading.Lock, repr=False)
     last_error: str = ""
+    log: Callable[[str], None] = field(default=_NOLOG, repr=False)
 
     def provider_names(self) -> list[str]:
         return [getattr(p, "agent", "?") for p in self.providers]
@@ -794,7 +839,8 @@ class SessionRegistry:
             self.enabled.add(agent)
         else:
             self.enabled.discard(agent)
-            self._cache.pop(agent, None)
+            with self._lock:
+                self._cache.pop(agent, None)
 
     def is_enabled(self, agent: str) -> bool:
         return agent in self.enabled
@@ -811,9 +857,12 @@ class SessionRegistry:
                 result = list(provider.discover(now))
             except Exception as exc:  # a broken provider is not a broken app
                 errors.append(f"{agent}: {exc}")
-                result = self._cache.get(agent, [])
+                self.log(f"discover: {agent} provider failed: {exc}")
+                with self._lock:
+                    result = list(self._cache.get(agent, []))
             else:
-                self._cache[agent] = result
+                with self._lock:
+                    self._cache[agent] = result
             found.extend(result)
         self.last_error = "; ".join(errors)
         return found
@@ -836,19 +885,22 @@ class SessionRegistry:
 def default_registry(
     roots: Iterable[str | os.PathLike] = (),
     busy_seconds: float = DEFAULT_BUSY_SECONDS,
+    log: Callable[[str], None] = _NOLOG,
 ) -> SessionRegistry:
     """The providers SAISENT ships with, Claude Code enabled by default."""
     registry = SessionRegistry(
         providers=[
-            ClaudeCodeProvider(busy_seconds=busy_seconds),
+            ClaudeCodeProvider(busy_seconds=busy_seconds, log=log),
             FreebuffProvider(
                 roots=list(roots),
                 busy_seconds=busy_seconds,
                 running=process_running,
+                log=log,
             ),
-            AntigravityProvider(busy_seconds=busy_seconds),
-            CodeNomadProvider(busy_seconds=busy_seconds),
+            AntigravityProvider(busy_seconds=busy_seconds, log=log),
+            CodeNomadProvider(busy_seconds=busy_seconds, log=log),
         ],
         enabled={"claude-code"},
+        log=log,
     )
     return registry

@@ -457,16 +457,18 @@ class SaisentApp(tk.Tk):
         busy = float(self.config_store["busy_seconds"])
         return SessionRegistry(
             providers=[
-                ClaudeCodeProvider(busy_seconds=busy),
-                AntigravityProvider(busy_seconds=busy),
-                CodeNomadProvider(busy_seconds=busy),
+                ClaudeCodeProvider(busy_seconds=busy, log=self.log),
+                AntigravityProvider(busy_seconds=busy, log=self.log),
+                CodeNomadProvider(busy_seconds=busy, log=self.log),
                 FreebuffProvider(
                     roots=list(self.config_store["freebuff_roots"] or []),
                     busy_seconds=busy,
                     running=process_running,
+                    log=self.log,
                 ),
             ],
             enabled=set(self.config_store["agents"] or ["claude-code"]),
+            log=self.log,
         )
 
     def _build_cdp_factory(self):
