@@ -142,6 +142,14 @@ class Config:
         "theme": "vintage",
     }
 
+    # Schema-version steps (N -> N+1), keyed by the version being left. Each
+    # step transforms the raw config dict; a step with no entry means the
+    # newer schema only added keys, which `_migrate` fills with defaults.
+    # v1 -> v2 added `theme`, `geometry` and `templates` as defaults, so the
+    # step is a no-op here -- the mechanism exists for future breaking
+    # changes (a renamed key, a reinterpreted value) that need real code.
+    MIGRATIONS: dict[int, Callable[[dict], dict]] = {}
+
     def __init__(self, path: Path) -> None:
         self.path = path
         self.data = json.loads(json.dumps(self.defaults))
@@ -210,17 +218,52 @@ class Config:
             return
         if not isinstance(raw, dict):
             raise ConfigError("SAISENT.json: корень должен быть объектом JSON")
+        raw_version = raw.get("version", 1)
+        try:
+            file_version = int(raw_version)
+        except (TypeError, ValueError):
+            file_version = 1
+        current = int(self.defaults["version"])
+        if file_version < current:
+            # An older app wrote this file. Advance it to the current schema
+            # and rewrite it, so the file self-heals instead of staying one
+            # schema behind forever. A failed write just leaves it stale; the
+            # in-memory migration still applies.
+            raw = self._migrate(raw, file_version)
+            self._write(raw)
+        elif file_version > current:
+            # A newer app wrote this file. Load every key we know and never
+            # downgrade the file: the version stays untouched so the newer
+            # app that owns it is not clobbered.
+            pass
         for key, fallback in self.defaults.items():
             if key not in raw:
                 continue
             self._validate(key, fallback, raw[key])
             self.data[key] = raw[key]
 
+    def _migrate(self, raw: dict, from_version: int) -> dict:
+        """Advance a config file to the current schema, one step at a time."""
+        current = int(self.defaults["version"])
+        migrated = dict(raw)
+        for version in range(from_version, current):
+            step = self.MIGRATIONS.get(version)
+            if step is not None:
+                migrated = step(migrated)
+            for key, fallback in self.defaults.items():
+                if key not in migrated:
+                    migrated[key] = json.loads(json.dumps(fallback))
+            migrated["version"] = version + 1
+        return migrated
+
     def save(self) -> bool:
+        return self._write(self.data)
+
+    def _write(self, raw: dict) -> bool:
         temp = self.path.with_suffix(".json.tmp")
         try:
             temp.write_text(
-                json.dumps(self.data, ensure_ascii=False, indent=2), encoding="utf-8"
+                json.dumps(raw, ensure_ascii=False, indent=2), encoding="utf-8"
             )
             os.replace(temp, self.path)
         except OSError:
