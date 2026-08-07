@@ -24,8 +24,9 @@ Requires Python 3.11+ on Windows.
    auto-refresh unless you enable "every N s" — by default, refresh is
    manual via the **Refresh** button.
 3. **Tab.** SAISENT guesses the tab number from session launch order.
-   Wrong? Set the correct number and press **Remember**; it saves for
-   that session. `0` = don't switch tabs at all.
+   Wrong? Override it per session in `SAISENT.json`: put the session key
+   under `tabs`, e.g. `{ "tabs": { "claude-code:abc123": 3 } }` (keys
+   look like `<agent>:<id>`). `0` = don't switch tabs at all.
 4. **Text.** Type (or paste) in the bottom-right box, press **Queue**
    (or Ctrl+Enter). **Queue All** puts the same text into every live
    session — replacing the old macro of "CTRL+2, text, CTRL+3, text".

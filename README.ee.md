@@ -23,8 +23,9 @@ Vajalik Python 3.11+ Windowsil.
    tabi number, andur ja projekt. Nimekiri ei uuene ise, kui pole sisse
    lülitatud "iga N s" — vaikimisi ainult nupust **Uuenda**.
 3. **Tab.** SAISENT arvab tabi numbri sessioonide käivitusjärjekorrast.
-   Vale? Pane õige number ja vajuta **Jäta meelde**; salvestub selle
-   sessiooni jaoks. `0` = ära vaheta tabi üldse.
+   Vale? Kirjuta number käsitsi `SAISENT.json` võtme `tabs` alla (võti
+   on kujul `<agent>:<id>`, nt `{ "tabs": { "claude-code:abc123": 3 } }`).
+   `0` = ära vaheta tabi üldse.
 4. **Tekst.** Kirjuta (või kleebi) paremal all, vajuta **Järjekorda**
    (Ctrl+Enter). **Kõigile** paneb sama teksti igasse elusasse sessiooni.
 5. **Järjekord.** Rea järjekord = saatmise järjekord. Lohistad hiirega või
@@ -93,4 +94,4 @@ vahele.
 python -m pytest -q
 ```
 
-<!-- source-digest: README.md sha256:ceeaf6195f36595f -->
+<!-- source-digest: README.md sha256:a73584ea9e942d83d3a1d5a38f8437aa55a5abf8837b778d616815f160dc0a56 -->
