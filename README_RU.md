@@ -12,9 +12,7 @@
 START_SAISENT.bat
 ```
 
-Нужен Python 3.11+ для Windows. Старый пульт (`SAISENT_GUI.pyw`, макро-шаги +
-расписание + watcher) остаётся рядом и запускается отдельно —
-`START_SAISENT_GUI.bat`.
+Нужен Python 3.11+ для Windows.
 
 ## Как этим пользоваться
 
