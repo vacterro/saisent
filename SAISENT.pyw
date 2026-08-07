@@ -64,7 +64,7 @@ ICON_PATH = HERE / "SAISENT.ico"
 
 def _load_core():
     """The proven Win32 layer and the Vintage Golden widgets."""
-    for name in ("SAISENT_core.pyw", "SAISENT_GUI.pyw"):
+    for name in ("SAISENT_core.pyw",):
         path = HERE / name
         if not path.exists():
             continue

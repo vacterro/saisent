@@ -17,7 +17,7 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent
-CORE_FILENAMES = ("SAISENT_core.pyw", "SAISENT_GUI.pyw")
+CORE_FILENAMES = ("SAISENT_core.pyw",)
 CORE_ALIASES = ("saisent_gui_core", "SAISENT_GUI", "SAISENT_core")
 
 if str(ROOT) not in sys.path:
