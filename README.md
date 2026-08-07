@@ -95,6 +95,7 @@ Where it comes from:
 | Claude Code | `~/.claude/sessions/<pid>.json` + transcript | last write time in transcript |
 | Freebuff | `<project>/.freebuff/desktop-v2.db`, `threads` table | `turn_state` field |
 | Antigravity | `~/.gemini/antigravity/conversations/*.db` | mtime of DB and its `-wal` |
+| CodeNomad | `~/.local/share/opencode/opencode.db` SQLite | last write time in transcript |
 
 Liveness is a separate check, not "the file on disk is fresh":
 
@@ -106,6 +107,8 @@ Liveness is a separate check, not "the file on disk is fresh":
   conversation is fresh. Freshness alone isn't enough: this store holds
   all conversations forever, and a closed editor used to fill the list
   with sessions no keystroke could reach.
+- **CodeNomad** — DB row is unarchived (`time_archived IS NULL`).
+  Active sessions are only the ones currently open.
 
 ## Delivery Address — "Address" Column
 

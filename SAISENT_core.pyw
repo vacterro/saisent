@@ -33,8 +33,8 @@ from SAISENT_watcher.sender import SendLog, SendResult
 
 APP_NAME = "SAISENT"
 APP_VERSION = "2.2.0"
-CONFIG_PATH = Path(__file__).with_name("SAISENT_GUI.json")
-LOG_PATH = Path(__file__).with_name("SAISENT_GUI.log")
+CONFIG_PATH = Path(__file__).with_name("SAISENT_GUI.json")  # known-legacy name, not drift
+LOG_PATH = Path(__file__).with_name("SAISENT_GUI.log")  # known-legacy name, not drift
 PRESETS_PATH = Path(__file__).with_name("SAISENT_PRESETS.json")
 WATCHER_STATE_PATH = Path(__file__).with_name("SAISENT_WATCHER.json")
 SEND_LOG_PATH = Path(__file__).with_name("SAISENT_WATCHER.log")

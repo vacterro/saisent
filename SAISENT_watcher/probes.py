@@ -249,21 +249,21 @@ class _OptionalProbe(Probe):
 
 
 def window_probe(title_match="", idle_pattern="", busy_pattern="", **kw):
-    """UI Automation text probe, when the dependency exists."""
+    """UI Automation text probe — reserved, reader not implemented (T-074)."""
     try:
         import uiautomation  # noqa: F401
     except ImportError:
         return _OptionalProbe("window", "uiautomation")
-    return _OptionalProbe("window", "uiautomation")   # reader not built yet
+    return _OptionalProbe("window", "uiautomation")
 
 
 def process_probe(cpu_below=5.0, **kw):
-    """CPU-idle probe, when psutil exists."""
+    """CPU-idle probe — reserved, reader not implemented (T-074)."""
     try:
         import psutil  # noqa: F401
     except ImportError:
         return _OptionalProbe("process", "psutil")
-    return _OptionalProbe("process", "psutil")        # reader not built yet
+    return _OptionalProbe("process", "psutil")
 
 
 def _needs_project(raw, project):
