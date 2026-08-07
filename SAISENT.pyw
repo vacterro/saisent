@@ -486,7 +486,8 @@ class SaisentApp(tk.Tk):
             self._tray_quit,
             ico_path=self.icon_path,
         )
-        self.tray.start(APP_NAME)
+        if not self.tray.start(APP_NAME):
+            self.log("Трей не запустился — иконка и уведомления будут недоступны.")
 
         self.protocol("WM_DELETE_WINDOW", self.on_close)
         self.after(120, self.pump)
