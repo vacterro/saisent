@@ -542,8 +542,8 @@ class SaisentApp(tk.Tk):
             for fresh in self.registry.discover():
                 if fresh.key == key:
                     return fresh.last_active
-        except Exception:
-            pass
+        except Exception as exc:
+            self.log(f"Обновление активности сессии не удалось: {exc}")
         return session.last_active
 
     # ---- layout ------------------------------------------------------
@@ -1558,7 +1558,8 @@ class SaisentApp(tk.Tk):
         """
         try:
             return {s.key: s.last_active for s in self.registry.discover()}
-        except Exception:
+        except Exception as exc:
+            self.log(f"Карта активности не читается: {exc}")
             return {}
 
     def last_send_for(self, agent: str) -> datetime | None:
@@ -1970,8 +1971,8 @@ class SaisentApp(tk.Tk):
             from SAISENT_sessions.history import rotate_log
 
             rotate_log(LOG_PATH)
-        except Exception:
-            pass
+        except Exception as exc:
+            self.log(f"Ротация журнала не удалась: {exc}")
 
     def open_log(self) -> None:
         try:
